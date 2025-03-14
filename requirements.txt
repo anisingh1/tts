@@ -1,0 +1,6 @@
+suno-bark @ git+https://github.com/anisingh1/bark-with-voice-clone.git
+scipy
+nltk
+uvicorn
+fastapi
+pydantic
