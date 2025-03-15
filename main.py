@@ -7,7 +7,8 @@ import uvicorn
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning, message='TypedStorage is deprecated')
 
-from tts import TTS
+from app.tts import TTS
+from app.stt import STT
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +27,7 @@ timeout_keep_alive = 5  # seconds
 
 # Setting up Translator 
 tts = TTS()
+stt = STT()
 
 
 # Exception Handler

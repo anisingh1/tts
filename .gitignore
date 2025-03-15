@@ -27,3 +27,5 @@ models/*
 build
 deps
 logs
+output/*
+assets/*

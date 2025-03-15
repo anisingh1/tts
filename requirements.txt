@@ -4,3 +4,6 @@ nltk
 uvicorn
 fastapi
 pydantic
+openai-whisper
+torch
+torchaudio

@@ -12,9 +12,9 @@ from scipy.io.wavfile import write as wav_write
 
 class TTS:
     def __init__(self):
-        semantic_path = "semantic_output/pytorch_model.bin"
-        coarse_path = "coarse_output/pytorch_model.bin"
-        fine_path = "fine_output/pytorch_model.bin"
+        semantic_path = "models/bark/semantic_output/pytorch_model.bin"
+        coarse_path = "models/bark/coarse_output/pytorch_model.bin"
+        fine_path = "models/bark/fine_output/pytorch_model.bin"
         preload_models(
             text_use_gpu=True,
             text_use_small=False,
