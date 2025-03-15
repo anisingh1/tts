@@ -1,177 +1,75 @@
-import sys
-import json
+import sys, os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from app.utils.prefs import pref
+import pandas as pd
+from tqdm import tqdm
 import uuid
-import argparse
-import uvicorn
-
-import warnings
-warnings.filterwarnings('ignore', category=UserWarning, message='TypedStorage is deprecated')
 
 from app.tts import TTS
 from app.stt import STT
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel
-
-
-class ErrorResponse(BaseModel):
-    request_id: str
-    code: str
-    error: str
-
-
-# Global variables
-timeout_keep_alive = 5  # seconds
-
-# Setting up Translator 
 tts = TTS()
 stt = STT()
 
+file = pref().getPref('input_data', 'label')
+workers = 1
 
-# Exception Handler
-async def unhandledExceptionHandler(request: Request, exc: Exception) -> JSONResponse:
-    """
-    This middleware will log all unhandled exceptions.
-    Unhandled exceptions are all exceptions that are not HTTPExceptions or RequestValidationErrors.
-    """
+if not os.path.exists(file):
+    print(f"Could not find {file}")
+    sys.exit(1)
+
+
+def get_audio(text, locale):
     id = str(uuid.uuid4())
-    exception_type, exception_value, exception_traceback = sys.exc_info()
-    exception_name = getattr(exception_type, "__name__", None)
-    response = ErrorResponse(request_id=id, code=str(500000), error=str(exception_name)).model_dump()
-    return JSONResponse(response, status_code=500)
-
-
-# Create FastAPI app
-app = FastAPI(title="G11n Audio IQ Service",
-    summary="Vector Cache service to store and search embeddings",
-    version="0.1",
-    openapi_tags=[
-        {
-            "name": "basic",
-            "description": "Common API(s)",
-        },
-        {
-            "name": "v1",
-            "description": "Version 1 API(s)"
-        },
-    ],
-    debug=True
-)
-app.add_exception_handler(Exception, unhandledExceptionHandler)
-
-
-# Health Check API
-@app.get('/health')
-async def health() -> Response:
-    return JSONResponse("OK", status_code=200)
-
-
-# Translate API
-@app.post('/v1/audio')
-async def translate(request: Request) -> Response:
-    # Reading input request data
-    request_dict = await request.json()
-    if 'request_id' in request_dict:
-        id = str(request_dict.pop("request_id"))
-    else:
-        id = str(uuid.uuid4())
-        
-    if 'text' in request_dict:
-        text = request_dict.pop("text")
-        if isinstance(text, list):
-            text = list(map(str, text))
-        else:
-            text = str(text)
-    else:
-        ret = ErrorResponse(request_id=id, code=str(422001), error="Required field `text` missing in request").model_dump()
-        return JSONResponse(ret, status_code=422)
-
-    if 'locale' in request_dict:
-        locale = str(request_dict.pop("locale"))
-    else:
-        ret = ErrorResponse(request_id=id, code=str(422001), error="Required field `locale` missing in request").model_dump()
-        return JSONResponse(ret, status_code=422)
-
-    if 'speaker' in request_dict:
-        speaker = str(request_dict.pop("speaker"))
-    else:
-        speaker = None
-        
-    try:
-        audio = tts.generate_audio(text=text, locale=locale, speaker=speaker)
-        tts.save_audio(audio, filename=f"{id}.wav")
-        ret = {
-            "request_id": id,
-            "response": f"{id}.wav"
-        }
-        return JSONResponse(ret)
-        
-    except Exception as e:
-        ret = ErrorResponse(request_id=id, code=str(500), error=str(e)).model_dump()
-        return JSONResponse(ret, status_code=500)
-    
-
-# Run Application
-if __name__ == "__main__":
-    import argparse
-    
-    # Setting configurable parameters
-    parser = argparse.ArgumentParser(description="RESTful API server.")
-
-    # Uvicorn parameters
-    parser.add_argument("--host", type=str, default='0.0.0.0', help="Hostname")
-    parser.add_argument("--port", type=int, default=6006, help="Port")
-
-    # Fastapi parameters
-    parser.add_argument("--allow-credentials",
-        action="store_true",
-        default=True,
-        help="allow credentials")
-    parser.add_argument("--allowed-origins",
-        type=json.loads,
-        default=["*"],
-        help="allowed origins")
-    parser.add_argument("--allowed-methods",
-        type=json.loads,
-        default=["*"],
-        help="allowed methods")
-    parser.add_argument("--allowed-headers",
-        type=json.loads,
-        default=["*"],
-        help="allowed headers")
-    
-    
-    args = parser.parse_args()
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=args.allowed_origins,
-        allow_credentials=args.allow_credentials,
-        allow_methods=args.allowed_methods,
-        allow_headers=args.allowed_headers
-    )
-
-        
-    # Uvicorn configuration
-    uvicorn_log_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "default": {
-                "()": "uvicorn.logging.DefaultFormatter",
-                "fmt": "%(levelprefix)s %(message)s",
-                "use_colors": None,
-            },
-            "access": {
-                "()": "uvicorn.logging.AccessFormatter",
-                "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
-            },
-        },
-        "loggers": {
-            "uvicorn": {"level": "INFO"},
-            "uvicorn.error": {"level": "INFO"},
-            "uvicorn.access": {"level": "INFO", "propagate": False},
-        },
+    audio = tts.generate_audio(text=text, locale=locale)
+    tts.save_audio(audio, filename=f"{id}.wav")
+    data = stt.transcribe_audio(f"{id}.wav")
+    wpm = stt.calculate_wpm(data)
+    ret = {
+        "filepath": f"{id}.wav",
+        "details": data,
+        "wpm": wpm
     }
-    uvicorn.run(app, host=args.host, port=args.port, timeout_keep_alive=timeout_keep_alive, log_config=uvicorn_log_config)
+    return ret
+    
+
+def process_text(df):
+    data = df.to_dict('records')
+    columns = []
+    columns.extend(data[0].keys())
+    input = pref().getPref('input_field', 'label')
+    locale = pref().getPref('locale_field', 'label')
+
+    out = []
+    row_count = len(data)
+    tbar = tqdm(total=row_count, desc='Processing', leave=True, unit='texts')
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(get_audio, str(row[input]), str(row[locale])): row for row in data}
+        for future in as_completed(futures):
+            out_row = futures[future]
+            results = future.result()
+            for result in results:
+                for k,v in result.items():
+                    out_row[k] = v
+            out.append(out_row)
+            tbar.update(n=1)
+            tbar.refresh()
+    tbar.refresh()
+    tbar.close()
+
+    out_df = pd.DataFrame.from_records(out)
+    return out_df
+
+
+if __name__ == "__main__":
+    if str(file).endswith('xlsx'):
+        df = pd.read_excel(file, header=0)
+    elif str(file).endswith('csv'):
+        df = pd.read_csv(file)
+    df = df.where(pd.notnull(df), None)
+    df = process_text(df)
+    filepath = os.path.dirname(file)
+    filename = os.path.basename(file)
+    filename = filename.replace('preprocessed_', '').replace('labelled_', '')
+    df.to_excel(os.path.join(filepath, 'labelled_' + filename), index=False)
+    sys.exit(0)

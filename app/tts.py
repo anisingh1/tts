@@ -39,8 +39,8 @@ class TTS:
         pieces = []
         for sentence in sentences:
             audio_array = generate_audio(sentence, history_prompt=speaker)
-            pieces += [audio_array, self.silence.copy()]
-        return np.concatenate(pieces)
+            #pieces += [audio_array, self.silence.copy()]
+        return audio_array #np.concatenate(pieces)
     
     
     def save_audio(self, audio, filename):

@@ -7,3 +7,4 @@ pydantic
 openai-whisper
 torch
 torchaudio
+pandas

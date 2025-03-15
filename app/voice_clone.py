@@ -58,3 +58,7 @@ class Clone:
         output_path = 'assets/prompts/' + voice_name + '.npz'
         np.savez(output_path, fine_prompt=codes, coarse_prompt=codes[:2, :], semantic_prompt=semantic_tokens)
         return output_path
+
+
+obj = Clone()
+obj.clone('/Users/anisingh/Downloads/audio.wav', 'en_male')
