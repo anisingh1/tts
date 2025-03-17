@@ -61,19 +61,7 @@ class _prefs:
 		except Exception as error:
 			return ""
 			
-prefsPath = os.path.join(os.path.dirname(__file__), "config.cfg")
+prefsPath = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.cfg")
 _prefsObj = _prefs(prefsPath)
 
-prefsLstmPath = os.path.join(os.path.dirname(__file__), "config.lstm.cfg")
-_prefsLstmObj = _prefs(prefsLstmPath)
-
-prefsBertPath = os.path.join(os.path.dirname(__file__), "config.bert.cfg")
-_prefsBertObj = _prefs(prefsBertPath)
-
-prefsLLMPath = os.path.join(os.path.dirname(__file__), "config.llm.cfg")
-_prefsLLMObj = _prefs(prefsLLMPath)
-
 def pref(): return _prefsObj
-def prefLstm(): return _prefsLstmObj
-def prefBert(): return _prefsBertObj
-def prefLLM(): return _prefsLLMObj

@@ -37,7 +37,7 @@ def process_text(df):
     data = df.to_dict('records')
     columns = []
     columns.extend(data[0].keys())
-    input = pref().getPref('input_field', 'label')
+    input = pref().getPref('text_field', 'label')
     locale = pref().getPref('locale_field', 'label')
 
     out = []
@@ -48,9 +48,10 @@ def process_text(df):
         for future in as_completed(futures):
             out_row = futures[future]
             results = future.result()
-            for result in results:
-                for k,v in result.items():
-                    out_row[k] = v
+            if 'wpm' in results:
+                out_row['words'] = results['wpm']['total_words']
+                out_row['duration'] = results['wpm']['total_duration']
+                out_row['wpm'] = results['wpm']['wpm']
             out.append(out_row)
             tbar.update(n=1)
             tbar.refresh()
@@ -70,6 +71,5 @@ if __name__ == "__main__":
     df = process_text(df)
     filepath = os.path.dirname(file)
     filename = os.path.basename(file)
-    filename = filename.replace('preprocessed_', '').replace('labelled_', '')
-    df.to_excel(os.path.join(filepath, 'labelled_' + filename), index=False)
+    df.to_excel(os.path.join(filepath, 'out_' + filename), index=False)
     sys.exit(0)

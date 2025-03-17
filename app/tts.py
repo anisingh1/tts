@@ -32,7 +32,7 @@ class TTS:
         self.silence = np.zeros(int(0.25 * SAMPLE_RATE))
     
     
-    def generate_audio(self, text: str, locale: str, speaker: str = '6'):
+    def generate_audio(self, text: str, locale: str, speaker: str = '1'):
         speaker = "v2/" + locale.split('-')[0] + "_speaker_" + speaker
         text = text.replace("\n", " ").strip()
         sentences = nltk.sent_tokenize(text)

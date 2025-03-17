@@ -23,6 +23,8 @@ models/*
 # logs
 *.log
 
+*.wav
+
 .env
 build
 deps

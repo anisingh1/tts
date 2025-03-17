@@ -8,3 +8,4 @@ openai-whisper
 torch
 torchaudio
 pandas
+openpyxl
