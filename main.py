@@ -39,12 +39,13 @@ def process_text(df):
     columns.extend(data[0].keys())
     input = pref().getPref('text_field', 'label')
     locale = pref().getPref('locale_field', 'label')
+    start_row = pref().getPref('start_row', 'label')
 
     out = []
-    row_count = len(data)
+    row_count = len(data[int(start_row)-1:])
     tbar = tqdm(total=row_count, desc='Processing', leave=True, unit='texts')
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(get_audio, str(row[input]), str(row[locale])): row for row in data}
+        futures = {executor.submit(get_audio, str(row[input]), str(row[locale])): row for row in data[int(start_row)-1:]}
         for future in as_completed(futures):
             out_row = futures[future]
             results = future.result()
