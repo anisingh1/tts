@@ -36,7 +36,7 @@ class TTS:
         speaker = "v2/" + locale.split('-')[0] + "_speaker_" + speaker
         text = text.replace("\n", " ").strip()
         sentences = nltk.sent_tokenize(text)
-        pieces = []
+        #pieces = []
         for sentence in sentences:
             audio_array = generate_audio(sentence, history_prompt=speaker)
             #pieces += [audio_array, self.silence.copy()]
